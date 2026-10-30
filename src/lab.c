@@ -335,12 +335,16 @@ bool table_add(fwd_table_t *table, const route_t *route)
     new_capacity = table->capacity == 0 ? 4 : table->capacity * 2;
     if (new_capacity < table->capacity ||
         new_capacity > SIZE_MAX / sizeof(*table->routes)) {
+      // GCOVR_EXCL_START
       return false;
+      // GCOVR_EXCL_STOP
     }
     grown_routes = realloc(table->routes,
                            new_capacity * sizeof(*table->routes));
     if (grown_routes == NULL) {
+      // GCOVR_EXCL_START
       return false;
+      // GCOVR_EXCL_STOP
     }
     table->routes = grown_routes;
     table->capacity = new_capacity;

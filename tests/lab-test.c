@@ -71,6 +71,7 @@ void test_cidr_parse_rejects_malformed_blocks_and_preserves_output(void)
   }
   TEST_ASSERT_FALSE(cidr_parse(NULL, &block));
   TEST_ASSERT_FALSE(cidr_parse("1.2.3.4/24", NULL));
+  TEST_ASSERT_FALSE(cidr_parse("12345678901234567/24", &block));
 }
 
 void test_cidr_format(void)
@@ -152,6 +153,9 @@ void test_cidr_subnet(void)
   TEST_ASSERT_TRUE(cidr_subnet(zero_block, 1, 0, &subnet));
   TEST_ASSERT_EQUAL_HEX32(0, subnet.addr);
   TEST_ASSERT_EQUAL_UINT8(0, subnet.prefix);
+  TEST_ASSERT_TRUE(cidr_subnet((cidr_t){0, 31}, 2, 1, &subnet));
+  TEST_ASSERT_EQUAL_HEX32(1, subnet.addr);
+  TEST_ASSERT_EQUAL_UINT8(32, subnet.prefix);
 }
 
 void test_cidr_subnet_rejects_invalid_requests_and_preserves_output(void)
@@ -196,6 +200,8 @@ void test_route_parse(void)
   TEST_ASSERT_FALSE(route_parse("default direct ", &route));
   TEST_ASSERT_FALSE(route_parse("default direct this-device-name-is-too-long",
                                 &route));
+  TEST_ASSERT_FALSE(route_parse("default direct eth0 extra", &route));
+  TEST_ASSERT_FALSE(route_parse("default not-an-address eth0", &route));
   TEST_ASSERT_FALSE(route_parse(NULL, &route));
   TEST_ASSERT_FALSE(route_parse("default direct eth0", NULL));
 }
@@ -286,6 +292,38 @@ void test_table_load_argument_and_read_errors(void)
   table_destroy(table);
 }
 
+void test_table_load_success_skips_blank_lines(void)
+{
+  fwd_table_t *table = table_create();
+  FILE *in = tmpfile();
+
+  TEST_ASSERT_NOT_NULL(table);
+  TEST_ASSERT_NOT_NULL(in);
+  TEST_ASSERT_TRUE(fputs(" \t\n", in) >= 0);
+  TEST_ASSERT_TRUE(fputs("# only a comment\n", in) >= 0);
+  TEST_ASSERT_TRUE(fputs("default direct eth0\n", in) >= 0);
+  rewind(in);
+
+  TEST_ASSERT_TRUE(table_load(table, in, NULL));
+  TEST_ASSERT_EQUAL_UINT(1, table_count(table));
+  fclose(in);
+  table_destroy(table);
+}
+
+void test_table_load_reports_read_error(void)
+{
+  fwd_table_t *table = table_create();
+  FILE *in = fopen(".", "r");
+  size_t bad_line = 99;
+
+  TEST_ASSERT_NOT_NULL(table);
+  TEST_ASSERT_NOT_NULL(in);
+  TEST_ASSERT_FALSE(table_load(table, in, &bad_line));
+  TEST_ASSERT_EQUAL_UINT(0, bad_line);
+  fclose(in);
+  table_destroy(table);
+}
+
 int main(void)
 {
   UNITY_BEGIN();
@@ -305,5 +343,7 @@ int main(void)
   RUN_TEST(test_table_add_rejects_invalid_destinations);
   RUN_TEST(test_table_load_handles_comments_and_bad_lines);
   RUN_TEST(test_table_load_argument_and_read_errors);
+  RUN_TEST(test_table_load_success_skips_blank_lines);
+  RUN_TEST(test_table_load_reports_read_error);
   return UNITY_END();
 }
