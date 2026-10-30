@@ -203,7 +203,7 @@ bool cidr_subnet(cidr_t block, uint32_t n, uint32_t i, cidr_t *out)
   uint8_t new_prefix;
   cidr_t result;
 
-  if (out == NULL || !cidr_is_network(block) || n == 0 ||
+  if (out == NULL || block.prefix > 32 || !cidr_is_network(block) || n == 0 ||
       (n & (n - 1U)) != 0 || i >= n) {
     return false;
   }

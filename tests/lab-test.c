@@ -163,11 +163,13 @@ void test_cidr_subnet_rejects_invalid_requests_and_preserves_output(void)
   cidr_t output = {UINT32_C(0x12345678), 9};
   cidr_t non_network = {UINT32_C(0xc0a80101), 24};
   cidr_t narrow = {UINT32_C(0xffffffff), 32};
+  cidr_t invalid_prefix = {0, 33};
 
   TEST_ASSERT_FALSE(cidr_subnet(non_network, 2, 0, &output));
   TEST_ASSERT_FALSE(cidr_subnet((cidr_t){0, 0}, 3, 0, &output));
   TEST_ASSERT_FALSE(cidr_subnet((cidr_t){0, 0}, 2, 2, &output));
   TEST_ASSERT_FALSE(cidr_subnet(narrow, 2, 0, &output));
+  TEST_ASSERT_FALSE(cidr_subnet(invalid_prefix, 1, 0, &output));
   TEST_ASSERT_FALSE(cidr_subnet((cidr_t){0, 0}, 1, 0, NULL));
   TEST_ASSERT_FALSE(cidr_subnet((cidr_t){0, 0}, 0, 0, &output));
   TEST_ASSERT_EQUAL_HEX32(UINT32_C(0x12345678), output.addr);
